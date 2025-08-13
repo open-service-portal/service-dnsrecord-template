@@ -1,0 +1,72 @@
+---
+# Composition (XC)
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: dnsrecord
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.com/v1alpha1
+    kind: XDNSRecord
+  mode: Pipeline
+  pipeline:
+    # Load composition environment
+    # https://docs.crossplane.io/latest/concepts/environment-configs/
+    # https://github.com/crossplane-contrib/function-go-templating/tree/main/example/context
+    - step: load-composition-environment
+      functionRef:
+        name: function-environment-configs
+      input:
+        apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+        kind: Input
+        spec:
+          environmentConfigs:
+          - type: Reference
+            ref:
+              name: dnsrecord
+
+    # Store values in ConfigMap
+    - step: store-values
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: {{ .observed.composite.resource.metadata.name }}
+              namespace: {{ .observed.composite.resource.spec.claimRef.namespace }}
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: configmap
+                # Native Kubernetes objects such as ConfigMap do not have a Ready or status field.
+                # By default, they lack `status.conditions` entries, which Crossplane relies on to determine the "Ready" status.
+                # Thus, explicitly mark this ConfigMap as ready.
+                gotemplating.fn.crossplane.io/ready: "True"
+            data:
+              type: "{{ .observed.composite.resource.spec.type }}"
+              name: "{{ .observed.composite.resource.spec.name }}"
+              value: "{{ .observed.composite.resource.spec.value }}"
+
+    # Return FQDN as object status
+    # https://github.com/crossplane-contrib/function-go-templating/?tab=readme-ov-file#updating-status-or-creating-composed-resources-with-the-composite-resources-type
+    - step: return-status
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            apiVersion: platform.example.com/v1alpha1
+            kind: XDNSRecord
+            status:
+              fqdn: {{ .observed.composite.resource.spec.name }}.{{ index .context "apiextensions.crossplane.io/environment" "zone" }}
+
+    - step: detect-readiness
+      functionRef:
+        name: function-auto-ready

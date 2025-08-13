@@ -1,0 +1,11 @@
+---
+# Composite Resource (XR)
+apiVersion: platform.example.com/v1alpha1
+kind: DNSRecord
+metadata:
+  name: ${{ values.name | dump }}
+  namespace: ${{ values.namespace | default('default') | dump }}
+spec:
+  type: ${{ values.recordType | default('A') | dump }}
+  name: ${{ values.dnsName | dump }}
+  value: ${{ values.recordValue | dump }}

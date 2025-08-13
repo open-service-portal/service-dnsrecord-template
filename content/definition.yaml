@@ -1,0 +1,74 @@
+---
+# Composite Resource Definition (XRD)
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xdnsrecords.platform.example.com
+spec:
+  group: platform.example.com
+  names:
+    kind: XDNSRecord
+    plural: xdnsrecords
+  claimNames:
+    kind: DNSRecord
+    plural: dnsrecords
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - metadata
+            - spec
+          properties:
+            metadata:
+              type: object
+              required:
+                - name
+                - namespace
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 63
+                  example: my-dns-alias
+                  pattern: '^[a-z]([-a-z0-9]*[a-z0-9])?$'
+                namespace:
+                  type: string
+                  minLength: 1
+                  maxLength: 63
+                  example: my-namespace
+                  pattern: '^[a-z]([-a-z0-9]*[a-z0-9])?$'
+            spec:
+              type: object
+              required:
+                - type
+                - name
+                - value
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - A
+                    - AAAA
+                    - CNAME
+                    - TXT
+                  example: "A"
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 63
+                  example: my-dns-alias
+                  pattern: '^[a-z]([-a-z0-9]*[a-z0-9])?(\.[a-z]([-a-z0-9]*[a-z0-9])?)?$'
+                value:
+                  type: string
+                  example: "1.1.1.1"
+            # Definition required to be able to patch the status field in composition
+            status:
+              type: object
+              properties:
+                fqdn:
+                  type: string
+                  example: app.example.com
