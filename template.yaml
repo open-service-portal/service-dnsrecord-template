@@ -5,7 +5,8 @@ metadata:
   title: DNS Record
   description: Create and manage DNS records using Crossplane
   tags:
-    - source:github-import    - crossplane
+    - source:github-import
+    - crossplane
     - dns
     - infrastructure
     - networking
